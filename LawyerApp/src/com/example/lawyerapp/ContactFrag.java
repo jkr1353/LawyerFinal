@@ -27,23 +27,35 @@ import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 
+//This Class implements the fragment for contacts placed in each case view upon flipping to the contact tab
+
+
+
 public class ContactFrag extends ListFragment {
 
-	private ArrayList<Contact> Contacts = new ArrayList<Contact>();
-	private ArrayList<Contact> CaseContacts = new ArrayList<Contact>();
-	private ArrayList<Long> contactIDs = new ArrayList<Long>();
 	
+	private ArrayList<Contact> Contacts = new ArrayList<Contact>();     //a list that gets generated containing Contact objects for all the contacts on the phone
+	private ArrayList<Contact> CaseContacts = new ArrayList<Contact>();  //a list that gets generated containing Contact objects for only the contacts associated with this case
+	private ArrayList<Long> contactIDs = new ArrayList<Long>();          // a list generated of contact ID's of this case's associated contacts, this is what gets stored in GreenDao for contacts
+	
+	// bool check to see if the list Contacts has been populated yet
 	private boolean created=false;
+	//buttons at the bottom of the screen
 	private Button newButton, pickCurrent, addNewMileage, deleteContact;
-	
+	//used by GreenDao to interact with our database
 	private DaoInstance daoinstance;
 	private CaseContactsDao caseContactsDao;
-	private Long parentID;
-	private ContactAdapter adapter;
+	
+	private Long parentID;// stores the current case ID
+	
+	//initialize the custom made list adapter, created in the function ContactAdapter below
+	private ContactAdapter adapter;        
 	
 	@Override
 	public void onCreate(Bundle saved) {
 		super.onCreate(saved);
+		created=false;
+		Contacts.clear();
 		
 		newButton = (Button) getActivity().findViewById(R.id.buttonNewHours);
 		pickCurrent = (Button) getActivity().findViewById(R.id.buttonNewExpense);
@@ -53,18 +65,18 @@ public class ContactFrag extends ListFragment {
 		parentID = getActivity().getIntent().getExtras().getLong("id");
 		daoinstance = DaoInstance.getInstance(getActivity());
 		caseContactsDao= daoinstance.getCaseContactsDao();
-		
+		//Only need one of the buttons at the bottom of the screen outside of this fragment, set the others to gone
 		pickCurrent.setVisibility(View.VISIBLE);
 		newButton.setVisibility(View.GONE);
 		deleteContact.setVisibility(View.GONE);
-		
 		addNewMileage.setVisibility(View.GONE);
-		
+		// pickCurrent is the button used to pick a contact from the phone's list of contacts to be associate with the current case
 		pickCurrent.setText("Import Existing Contact");
+		//These buttons may be utilized at a later date
 		newButton.setText("New Contact");
 		deleteContact.setText("Delete Contact");
 		
-		
+		//currently this button is invisible so this code is never reached, here for possible later implementation
 		deleteContact.setOnClickListener(new View.OnClickListener() {
 			
 			@Override
@@ -81,6 +93,7 @@ public class ContactFrag extends ListFragment {
 			}		 
 		});
 		
+		//currently this button is invisible so this code is never reached, here for possible later implementation
 		newButton.setOnClickListener(new View.OnClickListener() {
 			
 			@Override
@@ -88,12 +101,12 @@ public class ContactFrag extends ListFragment {
 			{
 				Intent intent = new Intent(Intent.ACTION_INSERT);
 				intent.setType(ContactsContract.Contacts.CONTENT_TYPE);
-
-				// Just two examples of information you can send to pre-fill data
-				//intent.putExtra(ContactsContract.Intents.Insert.NAME, "Dave Smith");
 				startActivity(intent);
 			}		 
 		});
+		
+		//when you click this button it creates a pop up window with a new intent to all the contacts on the phone, it lets you pick on and returns and associates it with the current case
+		// It actually gets associated with the case in onActivityResult below
 		pickCurrent.setOnClickListener(new View.OnClickListener() {
 			
 			@Override
@@ -107,19 +120,22 @@ public class ContactFrag extends ListFragment {
 		});
 		
 		
-		
+		//Creates a cursor and content resolver, used to query data about the contacts stored in the Android OS
 		ContentResolver cr = getActivity().getContentResolver();
 		Cursor cur = cr.query(ContactsContract.Contacts.CONTENT_URI, null, null, null, null);
-
+		
+		//checks to see if contact list is already populated and if any contacts are stored in the phone
 		if (cur.getCount() > 0 && created==false) {
 		while (cur.moveToNext()) {
 			created=true;
+			
+			//Create a new contact object and query the contact list to populate it with all needed information, contact id, name , phone number, picture
+			//It then adds the new Contact to the Contacts list
+			
 			Contact c=new Contact();
 			c.setID(cur.getString(cur.getColumnIndex(ContactsContract.Contacts._ID)));
 			c.setPicture(loadContactPhoto(cr,Long.valueOf(c.getID())));
-		    //String id = cur.getString(cur.getColumnIndex(ContactsContract.Contacts._ID));
 			c.setName(cur.getString(cur.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)));
-		    //String name = cur.getString(cur.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME));
 		    if (Integer.parseInt(cur.getString(cur.getColumnIndex(ContactsContract.Contacts.HAS_PHONE_NUMBER))) > 0) {
 		      // This inner cursor is for contacts that have multiple numbers.
 		      Cursor pCur = cr.query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI, null, ContactsContract.CommonDataKinds.Phone.CONTACT_ID + " = ?", new String[] { c.getID() }, null);
@@ -132,34 +148,10 @@ public class ContactFrag extends ListFragment {
 		    }
 		  }
 		}
-		
 		cur.close();
-		/*
-		ArrayList<CaseContacts> caseContactsList = (ArrayList<CaseContacts>)caseContactsDao.queryBuilder().where(CaseContactsDao.Properties.CaseID.eq(parentID)).list();
-		for(CaseContacts cc: caseContactsList)
-		{
-			if(cc.getCaseID()==parentID)
-			{
-				contactIDs.add(cc.getContactID());
-			}
-		}
-		for(Contact c: Contacts)
-		{
-			for(Long l : contactIDs)
-			{
-			if(Long.parseLong(c.getID())==l)
-			{
-				CaseContacts.add(c);
-			}
-			}
-		}
-		
-		
-		ContactAdapter adapter = new ContactAdapter(CaseContacts); 
-		setListAdapter(adapter);
-		*/
 	}
 	
+	//A function used to get the contact's picture and convert it into a bitmap that can be stored/displayed
 	public static Bitmap loadContactPhoto(ContentResolver cr, long  id) {
 	    Uri uri = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, id);
 	    InputStream input = ContactsContract.Contacts.openContactPhotoInputStream(cr, uri);
@@ -170,7 +162,14 @@ public class ContactFrag extends ListFragment {
 	}
 	
 	
-	
+	/*
+	 * This is a custom made adapter for contacts. An adpater is used to populate a listview.
+	 * This adapter is used to inflate a listview in this fragment
+	 * Each row of the list that gets generated has it's own custom xml layout file that gets inflated
+	 * The layout file displays the information for each contact in each space of the listview
+	 * It displays their current picture, name, phone number, etc.
+	 * Also contains buttons used to delete the contact's association with this case as well as editing or calling the contact
+	 */
 	private class ContactAdapter extends ArrayAdapter<Contact> {
 		public ContactAdapter(ArrayList<Contact> contacts) {
 			super(getActivity(), 0, contacts); 
@@ -183,7 +182,7 @@ public class ContactFrag extends ListFragment {
 				
 			}
 			
-			// configure the view
+			// configure the view of each list item
 			final Contact c = getItem(pos); 
 			
 			ImageView pic= (ImageView)convertView.findViewById(R.id.contact_pic);
@@ -195,6 +194,7 @@ public class ContactFrag extends ListFragment {
 			TextView number = (TextView) convertView.findViewById(R.id.contact_number);
 			number.setText(c.getNumbers().get(0));
 			
+			//set listeners for the three buttons on the end of each list item
 			Button deleteB=(Button)convertView.findViewById(R.id.delete_button);
 			final int innerpos=pos;
 			deleteB.setOnClickListener(new View.OnClickListener() {
@@ -234,6 +234,8 @@ public class ContactFrag extends ListFragment {
 		}
 	}
 	
+	//Used to get the contact that was selected when associating a contact with a case
+	//Then creates that contact's ID in the GreenDao database to be loaded in onResume
 	public void onActivityResult(int requestCode, int resultCode, Intent data) {  
 	    if (resultCode == Activity.RESULT_OK) {  
 	    	Bundle extras = data.getExtras();  
@@ -248,28 +250,15 @@ public class ContactFrag extends ListFragment {
 	    	         String id =c.getString(c.getColumnIndexOrThrow(ContactsContract.Contacts._ID));
 	    	         
 	    	         Long IDnum=Long.parseLong(id);
-	    	         /*
-	    	         Contact contact=new Contact();
-	    	         contact.setID(id);
-	    	         contact.setPicture(loadContactPhoto(getActivity().getContentResolver(),Long.valueOf(contact.getID())));
-	    	         contact.setName(c.getString(c.getColumnIndexOrThrow(ContactsContract.Contacts.DISPLAY_NAME)));
-	    	         if (Integer.parseInt(c.getString(c.getColumnIndex(ContactsContract.Contacts.HAS_PHONE_NUMBER))) > 0) {
-	    			      // This inner cursor is for contacts that have multiple numbers.
-	    			      Cursor pCur = getActivity().getContentResolver().query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI, null, ContactsContract.CommonDataKinds.Phone.CONTACT_ID + " = ?", new String[] { contact.getID() }, null);
-	    			      int PhoneIdx = pCur.getColumnIndex(Phone.DATA);
-	    			      while (pCur.moveToNext()) {
-	    			    	  contact.getNumbers().add(pCur.getString(PhoneIdx));
-	    			    	  Contacts.add(contact);		        
-	    			      }
-	    			      pCur.close();
-	    			    }
-	    			    */
 	    	         CaseContacts CC=new CaseContacts(IDnum, parentID, IDnum);
 	    	         caseContactsDao.insertOrReplace(CC);
 	    	     }
 	    	     }
 	    }  
 	} 
+	
+	//On resume is overridden to refresh the listview after you return to this page. 
+	//This is needed after you retrieve a contact to associate with this case so it is displayed
 	
 	@Override
 	public void onResume()

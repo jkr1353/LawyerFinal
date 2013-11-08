@@ -16,19 +16,24 @@ import android.widget.Button;
 import android.widget.ListView;
 import android.widget.SimpleCursorAdapter;
 
+//This Class implements the fragment for files placed in each case view upon flipping to the files tab
+
+
 public class FileFrag extends ListFragment {
 
+	//buttons found in the xml layout file
 	private Button photoButton;
 	private Button addNewExpense, addNewMileage, deleteFile;
 	
 	private Cursor cursor;
 	
+	//used by GreenDao to interact with our database
 	private DaoInstance daoinstance;
 	private FilesDao filesDao;
 	private SQLiteDatabase db;
 	
-	private Long parentID;
-	
+	private Long parentID; // stores the current case ID
+	//strings that get switched out on a button when deleting files
 	private String deleteFileStr, doneFileStr;
 	
 	@Override
@@ -45,6 +50,7 @@ public class FileFrag extends ListFragment {
 		deleteFileStr = "Delete Photo";
         doneFileStr = "Done";
 		
+        //Gets our specific instance of GreenDao stuff
 		daoinstance = DaoInstance.getInstance(getActivity());
 		
 		db = daoinstance.getDb();
@@ -55,17 +61,21 @@ public class FileFrag extends ListFragment {
 		
 		Log.i("CS499", parentID.toString());
 		
+		//Finds all of the specific buttons on our layout
 		photoButton = (Button) getActivity().findViewById(R.id.buttonNewHours);
 		addNewExpense = (Button) getActivity().findViewById(R.id.buttonNewExpense);
 		addNewMileage = (Button) getActivity().findViewById(R.id.buttonNewMileage);
 		deleteFile = (Button) getActivity().findViewById(R.id.buttonDelete);
-		
+		//we don't need these buttons on this fragment so set to invisible
 		addNewExpense.setVisibility(View.INVISIBLE);
 		addNewMileage.setVisibility(View.INVISIBLE);
 		
 		photoButton.setText("New Photo");
 		deleteFile.setText("Delete Photo");
 		
+		
+		//when you click this button it launches an intent to photoIntentActivity
+		//PhotoIntentActivity allows you to launch the picture taking intent, then name the picture and store it into the database
 		photoButton.setOnClickListener(new View.OnClickListener() 
 		{
 			
@@ -78,6 +88,11 @@ public class FileFrag extends ListFragment {
 			}
 			
 		});
+		
+		
+		//Swaps out the string on the delete button, 
+		//It changes the delete button into a done button to click to end the deleting process
+		//also sets the take photo button to invisible while deleting
 		
 		deleteFile.setOnClickListener(new View.OnClickListener() {
 			
@@ -98,6 +113,14 @@ public class FileFrag extends ListFragment {
 				}
 			}
 		});
+		
+		/*
+		 * The lines of code below query the database to see if there are any files currently associated with this case
+		 * If there are it puts them in a list adapter
+		 * Then you set the listview in the middle of the screen to use the adapter
+		 * This displays a list of all files associated with this case currently
+		 */
+		
 		
 		String textColumn = FilesDao.Properties.Name.columnName;
 		
@@ -120,6 +143,7 @@ public class FileFrag extends ListFragment {
 		return v; 
 	}
 	
+	//Set the correct buttons visible/invisible when you return to this fragment
 	@Override
 	public void onResume()
 	{
@@ -133,6 +157,9 @@ public class FileFrag extends ListFragment {
 		photoButton.setText("New Photo");
 		deleteFile.setText("Delete Photo");
 	}
+	
+	//This function gets the picture that is returned but the take picture intent
+	//It then stores it into the database where it gets displayed in a listview
 	
 	public void onActivityResult(int requestCode, int resultCode, Intent data) 
 	{
@@ -150,6 +177,12 @@ public class FileFrag extends ListFragment {
 	        cursor.requery();
 		}
 	}
+	
+	/*This function sets what to do when you click on an item in the listview
+	 * If you have clicked the delete button then it will delete the file you clicked from the database
+	 * If delete mode is not active then click on a file will cause that file to open a new intent
+	 * So for example click on a photo in the listview will let you view a full screen intent of that photo
+	 */
 	
 	@Override
 	public void onListItemClick(ListView l, View v, int position, long id) 
