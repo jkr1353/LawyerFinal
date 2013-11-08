@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorScheme1">#000000</color>
+    <color name="colorScheme2">#738F9B</color>
+    <color name="colorScheme3">#3D41EB</color>
+    <color name="menuBar">#000000</color>
+    <color name="tabSelected">#EFDD6F</color>
+    <color name="white">#FFFFFF</color>
+</resources>
